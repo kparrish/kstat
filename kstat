@@ -1,0 +1,39 @@
+#!/opt/kitchingroup/enthought/epd-7.3-2-rh5-x86_64/bin/python
+
+import argparse
+import subprocess as sub
+import os
+
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description='Username for qstat -n.')
+	parser.add_argument('-n', '--number', nargs=1, help='username')
+	args = vars(parser.parse_args())
+
+	# Check if no arguements
+	noargs = True
+	for key in args:
+		if args[key] != None:
+			noargs = False
+
+	# jstat behavior, qstat | grep $USER
+	if noargs:
+		grepped = sub.check_output('qstat | grep $USER', shell=True)
+		print grepped
+		
+	if args['number']:
+		try:
+			grepped = sub.check_output('qstat -n -1 | grep {0}'.format(args['number'][0]), shell=True)
+		except:
+			print '0'
+			import sys; sys.exit()
+
+		lined = grepped.split('\n')
+		numprocs = 0
+		for i, l in enumerate(lined):
+			procs = l.split()
+			if len(procs) != 0:
+				if procs[9] == 'R':
+					procs = procs[11] # take processor argument
+					numprocs += procs.count('/')
+		print numprocs
+
