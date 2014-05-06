@@ -2,33 +2,51 @@
 
 import argparse
 import subprocess as sub
+import sys
 import os
+
+totalprocs = (32 * 20) + (48 * 10)
+
+def valueBar(numprocs, totalprocs):
+	rawPercent = round(float(numprocs) / float(totalprocs), 2)
+	percent = 4 * int(10 * round(4 * float(numprocs) / float(totalprocs), 1) / 4) # out of 40
+	bar = '['
+	for i in range(percent):
+		bar += '#'
+	for i in range(40 - percent):
+		bar += '-'
+	bar += ']'
+	sys.stdout.write('\t' + str(rawPercent) + '% ' + bar + '\n')
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Username for qstat -n.')
 	parser.add_argument('-n', '--number', nargs=1, help='username')
+	parser.add_argument('-t', '--total', action='store_true', help='total')
+	parser.add_argument('-q', '--quiet', action='store_true', help='total')
 	args = vars(parser.parse_args())
 
 	# Check if no arguements
 	noargs = True
 	for key in args:
-		if args[key] != None:
-			noargs = False
+		if key != 'quiet':
+			if args[key] != None and args[key] != False:
+				noargs = False
 
 	# jstat behavior, qstat | grep $USER
 	if noargs:
 		try:
 			grepped = sub.check_output('qstat | grep $USER', shell=True)
 		except:
-			import sys; sys.exit()
+			sys.exit()
 		print grepped
 		
+	# return number of processors for user
 	if args['number']:
 		try:
 			grepped = sub.check_output('qstat -n -1 | grep {0}'.format(args['number'][0]), shell=True)
 		except:
 			print '0'
-			import sys; sys.exit()
+			sys.exit()
 
 		lined = grepped.split('\n')
 		numprocs = 0
@@ -38,5 +56,34 @@ if __name__ == "__main__":
 				if procs[9] == 'R':
 					procs = procs[11] # take processor argument
 					numprocs += procs.count('/')
-		print numprocs
+		sys.stdout.write(str(numprocs) + '/' + str(totalprocs))
+		if not args['quiet']:
+			valueBar(numprocs, totalprocs)
+		else:
+			sys.stdout.write('\n')
 
+	# return number of total processors being used
+	if args['total']:
+		try:
+			grepped = sub.check_output('qstat -n -1', shell=True)
+		except:
+			print '0'
+			sys.exit()
+				
+		grepped = '\n'.join(grepped.split('\n')[5:]) # remove header lines
+
+		lined = grepped.split('\n')
+		numprocs = 0
+		for i, l in enumerate(lined):
+			procs = l.split()
+			if len(procs) != 0:
+				if procs[9] == 'R':
+					procs = procs[11] # take processor argument
+					numprocs += procs.count('/')
+		sys.stdout.write(str(numprocs) + '/' + str(totalprocs))
+		if not args['quiet']:
+			valueBar(numprocs, totalprocs)
+		else:
+			sys.stdout.write('\n')
+
+		
