@@ -16,11 +16,13 @@ def valueBar(numprocs, totalprocs):
 	for i in range(40 - percent):
 		bar += '-'
 	bar += ']'
-	sys.stdout.write('\t' + str(rawPercent) + '% ' + bar + '\n')
+	sys.stdout.write('\t' + str(int(100 * rawPercent)) + '% ' + bar + '\n')
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Username for qstat -n.')
-	parser.add_argument('-n', '--number', nargs=1, help='username')
+	USER = sub.check_output('echo $USER', shell=True)
+	USER = USER.rstrip()
+	parser.add_argument('-n', '--number', nargs='?', const=USER, default=None, help='username')
 	parser.add_argument('-t', '--total', action='store_true', help='total')
 	parser.add_argument('-q', '--quiet', action='store_true', help='total')
 	args = vars(parser.parse_args())
@@ -38,12 +40,12 @@ if __name__ == "__main__":
 			grepped = sub.check_output('qstat | grep $USER', shell=True)
 		except:
 			sys.exit()
-		print grepped
+		sys.stdout.write(grepped)
 		
 	# return number of processors for user
 	if args['number']:
 		try:
-			grepped = sub.check_output('qstat -n -1 | grep {0}'.format(args['number'][0]), shell=True)
+			grepped = sub.check_output('qstat -n -1 | grep {0}'.format(args['number']), shell=True)
 		except:
 			print '0'
 			sys.exit()
