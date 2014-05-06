@@ -17,7 +17,10 @@ if __name__ == "__main__":
 
 	# jstat behavior, qstat | grep $USER
 	if noargs:
-		grepped = sub.check_output('qstat | grep $USER', shell=True)
+		try:
+			grepped = sub.check_output('qstat | grep $USER', shell=True)
+		except:
+			import sys; sys.exit()
 		print grepped
 		
 	if args['number']:
