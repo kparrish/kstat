@@ -6,6 +6,22 @@ import sys
 import os
 
 totalprocs = (32 * 20) + (48 * 10)
+groups = ['kitchingroup', 'mcgaugheygroup', 'maloneygroup']
+
+def groupName(groups, USER):
+	"""
+	Returns index of current user's group.
+	"""
+	grepped = ''
+	for i, g in enumerate(groups):
+		grepped += sub.check_output('getent group | grep {0}'.format(g), shell=True)
+	lined = grepped.split('\n')
+	for i, l in enumerate(lined):
+		index = l.find(USER)
+		if index != -1:
+			return i
+	return -1	
+
 
 def valueBar(numprocs, totalprocs):
 	rawPercent = round(float(numprocs) / float(totalprocs), 2)
@@ -18,11 +34,43 @@ def valueBar(numprocs, totalprocs):
 	bar += ']'
 	sys.stdout.write('\t' + str(int(100 * rawPercent)) + '% ' + bar + '\n')
 
+
+def userNumber(userName):
+	try:
+		grepped = sub.check_output('qstat -n -1 | grep {0}'.format(userName), shell=True)
+	except:
+		return 0
+
+	lined = grepped.split('\n')
+	numprocs = 0
+	for i, l in enumerate(lined):
+		procs = l.split()
+		if len(procs) != 0:
+			if procs[9] == 'R':
+				procs = procs[11] # take processor argument
+				numprocs += procs.count('/')
+	return numprocs
+
+def groupNumber(groupName):
+	grepped = sub.check_output('getent group | grep {0}'.format(groupName), shell=True)
+	groupNames = grepped.split(':')[3]
+	groupNames = groupNames.split(',')	
+
+	numprocs = 0
+	for i in range(len(groupNames)):
+		userprocs = userNumber(groupNames[i].rstrip())
+		numprocs += userprocs
+	return numprocs
+
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Username for qstat -n.')
 	USER = sub.check_output('echo $USER', shell=True)
 	USER = USER.rstrip()
+	groupNum = groupName(groups, USER)
+	GROUP = groups[groupNum]
 	parser.add_argument('-n', '--number', nargs='?', const=USER, default=None, help='username')
+	parser.add_argument('-g', '--group', nargs='?', const=GROUP, default=None, help='groupname')
 	parser.add_argument('-t', '--total', action='store_true', help='total')
 	parser.add_argument('-q', '--quiet', action='store_true', help='total')
 	args = vars(parser.parse_args())
@@ -41,28 +89,38 @@ if __name__ == "__main__":
 		except:
 			sys.exit()
 		sys.stdout.write(grepped)
-		
+
 	# return number of processors for user
 	if args['number']:
-		try:
-			grepped = sub.check_output('qstat -n -1 | grep {0}'.format(args['number']), shell=True)
-		except:
-			print '0'
-			sys.exit()
+		numprocs = userNumber(args['number'])
 
-		lined = grepped.split('\n')
-		numprocs = 0
-		for i, l in enumerate(lined):
-			procs = l.split()
-			if len(procs) != 0:
-				if procs[9] == 'R':
-					procs = procs[11] # take processor argument
-					numprocs += procs.count('/')
 		sys.stdout.write(str(numprocs) + '/' + str(totalprocs))
 		if not args['quiet']:
 			valueBar(numprocs, totalprocs)
 		else:
 			sys.stdout.write('\n')
+
+	# return number of processors for group
+	if args['group']:
+		if not args['group'] in groups:
+			print 'Not a valid group'
+			sys.exit()
+
+		numprocs = groupNumber(args['group'])
+
+		sys.stdout.write('Total: ' + str(numprocs) + '/' + str(totalprocs))
+		if not args['quiet']:
+			valueBar(numprocs, totalprocs)
+		else:
+			sys.stdout.write('\n')
+
+		proclim = totalprocs / 2
+		sys.stdout.write('Limit: ' + str(numprocs) + '/' + str(proclim))
+		if not args['quiet']:
+			valueBar(numprocs, proclim)
+		else:
+			sys.stdout.write('\n')
+
 
 	# return number of total processors being used
 	if args['total']:
