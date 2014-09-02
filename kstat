@@ -36,6 +36,7 @@ def valueBar(numprocs, totalprocs):
 
 
 def userNumber(userName):
+	userName = userName[:8] if len(userName) > 8 else userName # qstat truncates to 8 chars
 	try:
 		grepped = sub.check_output('qstat -n -1 | grep {0}'.format(userName), shell=True)
 	except:
