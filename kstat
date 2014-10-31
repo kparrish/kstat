@@ -4,8 +4,19 @@ import argparse
 import subprocess as sub
 import sys
 import os
+import xml.etree.ElementTree as ET
 
-totalprocs = (32 * 20) + (48 * 10)
+def getCores():
+    xml = sub.check_output(['beostatus', '-x'])
+    tree = ET.parse(xml)
+    root = tree.getroot()
+    cores = 0
+    for name in root.findall('Node'):
+        if name.find('state').text != 'down':
+            cores = cores + int(name.find('np').text)
+    return cores
+
+totalprocs = getCores()
 groups = ['kitchingroup', 'mcgaugheygroup', 'maloneygroup']
 
 def groupName(groups, USER):
