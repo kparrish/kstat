@@ -7,9 +7,8 @@ import os
 import xml.etree.ElementTree as ET
 
 def getCores():
-    xml = sub.check_output(['beostatus', '-x'])
-    tree = ET.parse(xml)
-    root = tree.getroot()
+    xml = sub.check_output(['pbsnodes', '-x'])
+    root = ET.fromstring(xml)
     cores = 0
     for name in root.findall('Node'):
         if name.find('state').text != 'down':
