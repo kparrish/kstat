@@ -16,7 +16,7 @@ def getCores():
     return cores
 
 totalprocs = getCores()
-groups = ['kitchingroup', 'mcgaugheygroup', 'maloneygroup']
+groups = ['mcgaugheygroup', 'kitchingroup', 'viswanathangroup', 'maloneygroup']
 
 def groupName(groups, USER):
 	"""
@@ -62,16 +62,25 @@ def userNumber(userName):
 				numprocs += procs.count('/')
 	return numprocs
 
-def groupNumber(groupName):
-	grepped = sub.check_output('getent group | grep {0}'.format(groupName), shell=True)
-	groupNames = grepped.split(':')[3]
-	groupNames = groupNames.split(',')	
 
+def groupNumber(groupName, verbose):
+	groupNames = groupUsers(groupName)
 	numprocs = 0
 	for i in range(len(groupNames)):
 		userprocs = userNumber(groupNames[i].rstrip())
+		if verbose:
+			sys.stdout.write(groupNames[i].rstrip() + ': ' + str(userprocs) + '\n')
 		numprocs += userprocs
 	return numprocs
+
+
+def groupUsers(groupName):
+	grepped = sub.check_output('getent group | grep {0}'.format(groupName), shell=True)
+	groupNames = grepped.split(':')[3]
+	groupNames = groupNames.split(',')
+	for i, g in enumerate(groupNames):
+		groupNames[i] = g.strip('\n\t ')
+	return groupNames
 
 
 if __name__ == "__main__":
@@ -83,7 +92,9 @@ if __name__ == "__main__":
 	parser.add_argument('-n', '--number', nargs='?', const=USER, default=None, help='username')
 	parser.add_argument('-g', '--group', nargs='?', const=GROUP, default=None, help='groupname')
 	parser.add_argument('-t', '--total', action='store_true', help='total')
-	parser.add_argument('-q', '--quiet', action='store_true', help='total')
+	parser.add_argument('-d', '--detail', action='store_true', help='detail')
+	parser.add_argument('-q', '--quiet', action='store_true', help='quiet')
+	parser.add_argument('-v', '--verbose', action='store_true', help='verbose')
 	args = vars(parser.parse_args())
 
 	# Check if no arguements
@@ -117,7 +128,7 @@ if __name__ == "__main__":
 			print 'Not a valid group'
 			sys.exit()
 
-		numprocs = groupNumber(args['group'])
+		numprocs = groupNumber(args['group'], args['verbose'])
 
 		sys.stdout.write('Total: ' + str(numprocs) + '/' + str(totalprocs))
 		if not args['quiet']:
@@ -158,3 +169,19 @@ if __name__ == "__main__":
 			sys.stdout.write('\n')
 
 		
+	# return number of total processors being used
+	if args['detail']:
+		for i, g in enumerate(groups):
+			numprocstotal = 0
+			groupNames = groupUsers(g)
+			sys.stdout.write(str(g)+ '\n')
+			for j, n in enumerate(groupNames):
+				numprocs = userNumber(n)
+				numprocstotal += numprocs
+				if numprocs > 0:
+					sys.stdout.write(str(n)+ str((16 - len(n))*' ')+ str(numprocs)+ '\n')
+			sys.stdout.write('TOTAL:\t'+ str(numprocstotal)+ '\n\n')
+
+
+
+
