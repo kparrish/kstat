@@ -16,6 +16,7 @@ def getCores():
     return cores
 
 totalprocs = getCores()
+proclim = 600
 groups = ['mcgaugheygroup', 'kitchingroup', 'viswanathangroup', 'maloneygroup']
 
 def groupName(groups, USER):
@@ -42,7 +43,7 @@ def valueBar(numprocs, totalprocs):
 	for i in range(40 - percent):
 		bar += '-'
 	bar += ']'
-	sys.stdout.write('\t' + str(int(100 * rawPercent)) + '% ' + bar + '\n')
+	sys.stdout.write(str(int(100 * rawPercent)) + '% ' + bar + '\n')
 
 
 def userNumber(userName):
@@ -118,6 +119,7 @@ if __name__ == "__main__":
 
 		sys.stdout.write(str(numprocs) + '/' + str(totalprocs))
 		if not args['quiet']:
+			sys.stdout.write('\t')
 			valueBar(numprocs, totalprocs)
 		else:
 			sys.stdout.write('\n')
@@ -132,13 +134,14 @@ if __name__ == "__main__":
 
 		sys.stdout.write('Total: ' + str(numprocs) + '/' + str(totalprocs))
 		if not args['quiet']:
+			sys.stdout.write('\t')
 			valueBar(numprocs, totalprocs)
 		else:
 			sys.stdout.write('\n')
 
-		proclim = totalprocs / 2
 		sys.stdout.write('Limit: ' + str(numprocs) + '/' + str(proclim))
 		if not args['quiet']:
+			sys.stdout.write('\t')
 			valueBar(numprocs, proclim)
 		else:
 			sys.stdout.write('\n')
@@ -164,6 +167,7 @@ if __name__ == "__main__":
 					numprocs += procs.count('/')
 		sys.stdout.write(str(numprocs) + '/' + str(totalprocs))
 		if not args['quiet']:
+			sys.stdout.write('\t')
 			valueBar(numprocs, totalprocs)
 		else:
 			sys.stdout.write('\n')
@@ -171,16 +175,25 @@ if __name__ == "__main__":
 		
 	# return number of total processors being used
 	if args['detail']:
+		numprocstotal = 0
 		for i, g in enumerate(groups):
-			numprocstotal = 0
+			numprocsgroup = 0
 			groupNames = groupUsers(g)
 			sys.stdout.write(str(g)+ '\n')
 			for j, n in enumerate(groupNames):
 				numprocs = userNumber(n)
+				numprocsgroup += numprocs
 				numprocstotal += numprocs
 				if numprocs > 0:
 					sys.stdout.write(str(n)+ str((16 - len(n))*' ')+ str(numprocs)+ '\n')
-			sys.stdout.write('TOTAL:\t'+ str(numprocstotal)+ '\n\n')
+			sys.stdout.write('TOTAL:\t'+ str(numprocsgroup)+ '/'+ str(proclim))
+			if not args['quiet']:
+				sys.stdout.write('\t')
+				valueBar(numprocsgroup, proclim)
+			sys.stdout.write('\n\n')
+		sys.stdout.write('TOTAL Cluster Usage:\t'+ str(numprocstotal)+ '/'+ str(totalprocs)+ '\n')
+		if not args['quiet']:
+			valueBar(numprocstotal, totalprocs)
 
 
 
