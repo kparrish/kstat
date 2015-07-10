@@ -16,7 +16,7 @@ def getCores():
     return cores
 
 totalprocs = getCores()
-proclim = 600
+proclim = 500
 groups = ['mcgaugheygroup', 'kitchingroup', 'viswanathangroup', 'maloneygroup']
 
 def groupName(groups, USER):
@@ -46,13 +46,25 @@ def valueBar(numprocs, totalprocs):
 	sys.stdout.write(str(int(100 * rawPercent)) + '% ' + bar + '\n')
 
 
-def userNumber(userName):
-	userName = userName[:8] if len(userName) > 8 else userName # qstat truncates to 8 chars
+def qstatOutput():
 	try:
-		grepped = sub.check_output('qstat -n -1 | grep {0}'.format(userName), shell=True)
+		return sub.check_output('qstat -n -1', shell=True)
 	except:
 		return 0
 
+
+def userNumber(userName, qstat = None):
+	userName = userName[:8] if len(userName) > 8 else userName # qstat truncates to 8 chars
+	if qstat is None:
+		qstat = qstatOutput()
+		if qstat == 0:
+			return 0
+
+	grepped = ''
+	for line in qstat.splitlines(True):
+		if line.find(userName) > -1:
+			grepped += line
+	
 	lined = grepped.split('\n')
 	numprocs = 0
 	for i, l in enumerate(lined):
@@ -64,11 +76,17 @@ def userNumber(userName):
 	return numprocs
 
 
-def groupNumber(groupName, verbose):
+def groupNumber(groupName, verbose, qstat = None):
 	groupNames = groupUsers(groupName)
 	numprocs = 0
+
+	if qstat is None:
+		qstat = qstatOutput()
+		if qstat == 0:
+			return 0
+
 	for i in range(len(groupNames)):
-		userprocs = userNumber(groupNames[i].rstrip())
+		userprocs = userNumber(groupNames[i].rstrip(), qstat)
 		if verbose:
 			sys.stdout.write(groupNames[i].rstrip() + ': ' + str(userprocs) + '\n')
 		numprocs += userprocs
@@ -130,7 +148,8 @@ if __name__ == "__main__":
 			print 'Not a valid group'
 			sys.exit()
 
-		numprocs = groupNumber(args['group'], args['verbose'])
+		qstat = qstatOutput()
+		numprocs = groupNumber(args['group'], args['verbose'], qstat)
 
 		sys.stdout.write('Total: ' + str(numprocs) + '/' + str(totalprocs))
 		if not args['quiet']:
@@ -176,12 +195,13 @@ if __name__ == "__main__":
 	# return number of total processors being used
 	if args['detail']:
 		numprocstotal = 0
+		qstat = qstatOutput()
 		for i, g in enumerate(groups):
 			numprocsgroup = 0
 			groupNames = groupUsers(g)
 			sys.stdout.write(str(g)+ '\n')
 			for j, n in enumerate(groupNames):
-				numprocs = userNumber(n)
+				numprocs = userNumber(n, qstat)
 				numprocsgroup += numprocs
 				numprocstotal += numprocs
 				if numprocs > 0:
